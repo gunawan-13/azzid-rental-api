@@ -62,7 +62,7 @@ exports.googleLogin = async (req, res) => {
     let user = await findUserByEmail(email);
     if (user) {
       if (user.status !== 'Active') return error(res, 403, 'Akun tidak aktif');
-      if (!user.google_id) await pool.query('UPDATE users SET google_id=?, auth_provider=? WHERE id=?', [google.sub, 'google', user.id]);
+      if (!user.google_id) await pool.query('UPDATE users SET google_id=?, auth_provider=? WHERE id=?', [google.sub, user.auth_provider === 'password' ? 'google' : 'google', user.id]);
       user = await findUserByEmail(email);
     } else {
       const randomHash = await bcrypt.hash(crypto.randomBytes(32).toString('hex'), 12);

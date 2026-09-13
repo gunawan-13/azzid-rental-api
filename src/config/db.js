@@ -10,11 +10,7 @@ const pool = mysql.createPool({
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,
-  dateStrings: true,
-  // ⚠️ SSL wajib untuk Railway MySQL di production
-  ...(process.env.NODE_ENV === 'production' && {
-    ssl: { rejectUnauthorized: false }
-  })
+  dateStrings: true
 });
 
 async function testConnection() {

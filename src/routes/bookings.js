@@ -1,2 +1,1 @@
-const r=require('express').Router(),c=require('../controllers/bookingController');const {requireAuth,requireRole}=require('../middleware/auth');
-r.get('/track/:code',c.track);r.post('/',c.create);r.get('/',requireAuth,requireRole('admin'),c.list);r.get('/:id',requireAuth,requireRole('admin'),c.get);r.put('/:id',requireAuth,requireRole('admin'),c.update);r.delete('/:id',requireAuth,requireRole('admin'),c.remove);module.exports=r;
+const r=require('express').Router(),c=require('../controllers/bookingController');r.get('/',c.list);r.get('/:id',c.get);r.post('/',c.create);r.put('/:id',c.update);r.delete('/:id',c.remove);module.exports=r;
