@@ -1,4 +1,5 @@
 const express = require('express');
+const path = require('path');
 const cors = require('cors');
 const morgan = require('morgan');
 const { port, corsOrigin, nodeEnv } = require('./config/env');
@@ -17,6 +18,41 @@ async function ensureAuthSchema() {
 }
 
 
+
+async function ensureBusinessSchema() {
+  const alterations = [
+    ["vehicles","bag","ALTER TABLE vehicles MODIFY COLUMN bag VARCHAR(80) NULL"],
+    ["customers","ktp_number","ALTER TABLE customers ADD COLUMN ktp_number VARCHAR(80) NULL"],
+    ["customers","birth_date","ALTER TABLE customers ADD COLUMN birth_date DATE NULL"],
+    ["customers","purpose","ALTER TABLE customers ADD COLUMN purpose VARCHAR(255) NULL"],
+    ["customers","notes","ALTER TABLE customers ADD COLUMN notes TEXT NULL"],
+    ["bookings","subtotal","ALTER TABLE bookings ADD COLUMN subtotal DECIMAL(14,2) NOT NULL DEFAULT 0 AFTER dropoff_location"],
+    ["bookings","driver_amount","ALTER TABLE bookings ADD COLUMN driver_amount DECIMAL(14,2) NOT NULL DEFAULT 0 AFTER subtotal"],
+    ["bookings","discount_amount","ALTER TABLE bookings ADD COLUMN discount_amount DECIMAL(14,2) NOT NULL DEFAULT 0 AFTER driver_amount"],
+    ["bookings","payment_method","ALTER TABLE bookings ADD COLUMN payment_method VARCHAR(80) NULL AFTER payment_status"],
+    ["bookings","transaction_id","ALTER TABLE bookings ADD COLUMN transaction_id VARCHAR(120) NULL AFTER payment_method"],
+    ["bookings","paid_at","ALTER TABLE bookings ADD COLUMN paid_at DATETIME NULL AFTER transaction_id"],
+    ["bookings","user_email","ALTER TABLE bookings ADD COLUMN user_email VARCHAR(160) NULL AFTER paid_at"],
+    ["bookings","notes","ALTER TABLE bookings ADD COLUMN notes TEXT NULL AFTER user_email"],
+    ["drivers","license_no","ALTER TABLE drivers ADD COLUMN license_no VARCHAR(80) NULL"],
+    ["drivers","license_expiry","ALTER TABLE drivers ADD COLUMN license_expiry DATE NULL"],
+    ["drivers","rating","ALTER TABLE drivers ADD COLUMN rating DECIMAL(3,2) NOT NULL DEFAULT 0"],
+    ["drivers","trips","ALTER TABLE drivers ADD COLUMN trips INT UNSIGNED NOT NULL DEFAULT 0"],
+    ["drivers","notes","ALTER TABLE drivers ADD COLUMN notes TEXT NULL"]
+  ];
+  for (const [table,col,sql] of alterations) {
+    const [rows]=await pool.query(`SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=? AND COLUMN_NAME=?`,[table,col]);
+    if(!rows.length) await pool.query(sql);
+  }
+  await pool.query(`ALTER TABLE drivers MODIFY COLUMN status ENUM('Available','Assigned','On Trip','Off Duty','Inactive') DEFAULT 'Available'`);
+  await pool.query(`CREATE TABLE IF NOT EXISTS business_settings (
+    id TINYINT UNSIGNED PRIMARY KEY,business_name VARCHAR(160) NOT NULL DEFAULT '',email VARCHAR(160) NULL,phone VARCHAR(50) NULL,whatsapp VARCHAR(50) NULL,address TEXT NULL,
+    hero_title VARCHAR(255) NULL,hero_subtitle TEXT NULL,announcement TEXT NULL,updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP)`);
+  await pool.query(`CREATE TABLE IF NOT EXISTS payment_accounts (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,method VARCHAR(60) NOT NULL,provider VARCHAR(80) NULL,account_name VARCHAR(160) NULL,
+    account_number VARCHAR(120) NULL,instructions TEXT NULL,active TINYINT(1) NOT NULL DEFAULT 1,created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP)`);
+}
+
 const allowedOrigins = corsOrigin.split(',').map(x => x.trim()).filter(Boolean);
 const corsOptions = {
   credentials: true,
@@ -32,18 +68,26 @@ app.use(cors(corsOptions));
 app.use(express.json({ limit: '2mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan('dev'));
-app.get('/', (req, res) => res.json({ success: true, name: 'Azzid Rental API', version: '1.0.0', status: 'online' }));
+const frontendDir = path.join(__dirname, '../../frontend');
+app.use(express.static(frontendDir));
+app.get('/', (req,res) => {
+  if ((req.headers.accept||'').includes('text/html')) return res.sendFile(path.join(frontendDir,'index.html'));
+  res.json({ success:true,name:'Azzid Rental API',version:'1.0.0',status:'online' });
+});
 app.use('/api/health', require('./routes/health'));
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/users', require('./routes/users'));
 app.use('/api/vehicles', require('./routes/vehicles'));
 app.use('/api/customers', require('./routes/customers'));
 app.use('/api/bookings', require('./routes/bookings'));
+app.use('/api/drivers', require('./routes/drivers'));
+app.use('/api/settings', require('./routes/settings'));
+app.use('/api/promos', require('./routes/promos'));
 app.use(notFound);
 app.use(errorHandler);
 
 app.listen(port, async () => {
   console.log(`Azzid Rental API berjalan pada port ${port}`);
-  try { await testConnection(); await ensureAuthSchema(); console.log('MySQL database terhubung'); console.log('Auth schema siap (users + password_resets)'); }
+  try { await testConnection(); await ensureAuthSchema(); await ensureBusinessSchema(); console.log('MySQL database terhubung'); console.log('Auth + business schema siap'); }
   catch (e) { console.error('MySQL belum terhubung / schema auth gagal:', e.message); }
 });

@@ -1,18 +1,15 @@
 {
-  "name": "azzid-rental-api",
-  "version": "1.0.0",
-  "description": "Backend API Azzid Rentcar",
-  "main": "src/server.js",
+  "name": "azzid-rentcar-ready",
+  "private": true,
   "scripts": {
-    "start": "node src/server.js",
-    "dev": "nodemon src/server.js",
-    "create-admin": "node scripts/create-admin.js",
-    "create-user": "node scripts/create-user.js"
+    "start": "node backend/src/server.js",
+    "dev": "nodemon backend/src/server.js",
+    "create-admin": "node backend/scripts/create-admin.js"
   },
   "dependencies": {
+    "express": "^5.1.0",
     "cors": "^2.8.5",
     "dotenv": "^16.6.1",
-    "express": "^5.1.0",
     "mysql2": "^3.14.3",
     "morgan": "^1.10.0",
     "bcryptjs": "^3.0.2",

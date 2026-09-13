@@ -7,6 +7,10 @@ CREATE TABLE IF NOT EXISTS customers (
  email VARCHAR(160) NULL,
  phone VARCHAR(40) NOT NULL,
  address TEXT NULL,
+ ktp_number VARCHAR(80) NULL,
+ birth_date DATE NULL,
+ purpose VARCHAR(255) NULL,
+ notes TEXT NULL,
  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
@@ -24,7 +28,7 @@ CREATE TABLE IF NOT EXISTS vehicles (
  fuel VARCHAR(30) NULL,
  color VARCHAR(50) NULL,
  doors TINYINT UNSIGNED NULL,
- bag TINYINT UNSIGNED NULL,
+ bag VARCHAR(80) NULL,
  price_lk DECIMAL(14,2) NOT NULL DEFAULT 0,
  price_driver DECIMAL(14,2) NULL,
  image VARCHAR(500) NULL,
@@ -56,28 +60,23 @@ CREATE TABLE IF NOT EXISTS bookings (
  rental_type ENUM('Lepas Kunci','Dengan Driver') NOT NULL DEFAULT 'Lepas Kunci',
  pickup_location VARCHAR(255) NULL,
  dropoff_location VARCHAR(255) NULL,
+ subtotal DECIMAL(14,2) NOT NULL DEFAULT 0,
+ driver_amount DECIMAL(14,2) NOT NULL DEFAULT 0,
+ discount_amount DECIMAL(14,2) NOT NULL DEFAULT 0,
  total_amount DECIMAL(14,2) NOT NULL DEFAULT 0,
  status ENUM('Pending','Confirmed','Ongoing','Completed','Cancelled') NOT NULL DEFAULT 'Pending',
  payment_status ENUM('Unpaid','Paid','Partial','Refunded') NOT NULL DEFAULT 'Unpaid',
+ payment_method VARCHAR(80) NULL,
+ transaction_id VARCHAR(120) NULL,
+ paid_at DATETIME NULL,
+ user_email VARCHAR(160) NULL,
+ notes TEXT NULL,
  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
  CONSTRAINT fk_booking_vehicle FOREIGN KEY(vehicle_id) REFERENCES vehicles(id) ON UPDATE CASCADE,
  CONSTRAINT fk_booking_customer FOREIGN KEY(customer_id) REFERENCES customers(id) ON DELETE SET NULL ON UPDATE CASCADE,
  CONSTRAINT fk_booking_driver FOREIGN KEY(driver_id) REFERENCES drivers(id) ON DELETE SET NULL ON UPDATE CASCADE
 );
-
--- Data awal kendaraan. Aman dijalankan berulang kali tanpa menambah duplikat berdasarkan nama.
-INSERT INTO vehicles(name,brand,type,transmission,seats,price_lk,price_driver,status)
-SELECT 'Toyota Avanza','Toyota','MPV','Automatic',7,350000,500000,'Available'
-WHERE NOT EXISTS (SELECT 1 FROM vehicles WHERE name='Toyota Avanza');
-
-INSERT INTO vehicles(name,brand,type,transmission,seats,price_lk,price_driver,status)
-SELECT 'Toyota Innova Reborn','Toyota','MPV','Automatic',7,550000,700000,'Available'
-WHERE NOT EXISTS (SELECT 1 FROM vehicles WHERE name='Toyota Innova Reborn');
-
-INSERT INTO vehicles(name,brand,type,transmission,seats,price_lk,price_driver,status)
-SELECT 'Toyota Hiace','Toyota','Minibus','Manual',15,1000000,1250000,'Available'
-WHERE NOT EXISTS (SELECT 1 FROM vehicles WHERE name='Toyota Hiace');
 
 -- Authentication users. Register biasa selalu membuat role user.
 CREATE TABLE IF NOT EXISTS users (
@@ -92,4 +91,43 @@ CREATE TABLE IF NOT EXISTS users (
  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
  INDEX idx_users_role (role),
  INDEX idx_users_status (status)
+);
+
+
+CREATE TABLE IF NOT EXISTS business_settings (
+ id TINYINT UNSIGNED PRIMARY KEY,
+ business_name VARCHAR(160) NOT NULL DEFAULT '',
+ email VARCHAR(160) NULL,
+ phone VARCHAR(50) NULL,
+ whatsapp VARCHAR(50) NULL,
+ address TEXT NULL,
+ hero_title VARCHAR(255) NULL,
+ hero_subtitle TEXT NULL,
+ announcement TEXT NULL,
+ updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+CREATE TABLE IF NOT EXISTS payment_accounts (
+ id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+ method VARCHAR(60) NOT NULL,
+ provider VARCHAR(80) NULL,
+ account_name VARCHAR(160) NULL,
+ account_number VARCHAR(120) NULL,
+ instructions TEXT NULL,
+ active TINYINT(1) NOT NULL DEFAULT 1,
+ created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+ updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+ INDEX idx_payment_active(active)
+);
+CREATE TABLE IF NOT EXISTS promos (
+ id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+ code VARCHAR(50) NOT NULL UNIQUE,
+ type ENUM('percent','flat') NOT NULL DEFAULT 'percent',
+ value DECIMAL(14,2) NOT NULL DEFAULT 0,
+ cap DECIMAL(14,2) NOT NULL DEFAULT 0,
+ min_days INT UNSIGNED NOT NULL DEFAULT 1,
+ start_date DATE NOT NULL,
+ end_date DATE NOT NULL,
+ status ENUM('Active','Inactive','Expired') NOT NULL DEFAULT 'Active',
+ created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+ updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
