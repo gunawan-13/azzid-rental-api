@@ -15,7 +15,12 @@ function setAuthCookie(res, token) {
   const secure = production ? '; Secure' : '';
   res.setHeader('Set-Cookie', `azzid_token=${encodeURIComponent(token)}; HttpOnly; Path=/; Max-Age=86400; SameSite=${sameSite}${secure}`);
 }
-function clearAuthCookie(res) { res.setHeader('Set-Cookie', 'azzid_token=; HttpOnly; Path=/; Max-Age=0; SameSite=Lax'); }
+function clearAuthCookie(res) {
+  const production = process.env.NODE_ENV === 'production';
+  const sameSite = production ? 'None' : 'Lax';
+  const secure = production ? '; Secure' : '';
+  res.setHeader('Set-Cookie', `azzid_token=; HttpOnly; Path=/; Max-Age=0; SameSite=${sameSite}${secure}`);
+}
 async function findUserByEmail(email) { const [rows] = await pool.query('SELECT * FROM users WHERE email=? LIMIT 1', [email]); return rows[0] || null; }
 
 exports.register = async (req, res) => {
