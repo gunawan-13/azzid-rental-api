@@ -1,7 +1,62 @@
 const { pool } = require('../config/db');
 const { ok, created, error } = require('../utils/response');
-exports.list=async(req,res)=>{const [r]=await pool.query(`SELECT b.*,v.name vehicle_name,c.name customer_name FROM bookings b LEFT JOIN vehicles v ON v.id=b.vehicle_id LEFT JOIN customers c ON c.id=b.customer_id ORDER BY b.id DESC`);ok(res,r);};
-exports.get=async(req,res)=>{const [r]=await pool.query(`SELECT b.*,v.name vehicle_name,c.name customer_name FROM bookings b LEFT JOIN vehicles v ON v.id=b.vehicle_id LEFT JOIN customers c ON c.id=b.customer_id WHERE b.id=?`,[req.params.id]);if(!r.length)return error(res,404,'Booking tidak ditemukan');ok(res,r[0]);};
-exports.create=async(req,res)=>{const {booking_code,vehicle_id,customer_id,start_date,end_date,rental_type,pickup_location,dropoff_location,total_amount,status}=req.body;if(!vehicle_id||!start_date||!end_date)return error(res,400,'vehicle_id, start_date dan end_date wajib diisi');const [x]=await pool.query(`INSERT INTO bookings(booking_code,vehicle_id,customer_id,start_date,end_date,rental_type,pickup_location,dropoff_location,total_amount,status) VALUES(?,?,?,?,?,?,?,?,?,?)`,[booking_code||`AZZ-${Date.now()}`,vehicle_id,customer_id||null,start_date,end_date,rental_type||'Lepas Kunci',pickup_location||null,dropoff_location||null,total_amount||0,status||'Pending']);const [r]=await pool.query('SELECT * FROM bookings WHERE id=?',[x.insertId]);created(res,r[0]);};
-exports.update=async(req,res)=>{const allowed=['start_date','end_date','rental_type','pickup_location','dropoff_location','total_amount','status','payment_status','driver_id'];const f=allowed.filter(k=>req.body[k]!==undefined);if(!f.length)return error(res,400,'Tidak ada data untuk diperbarui');const [x]=await pool.query(`UPDATE bookings SET ${f.map(k=>`${k}=?`).join(',')} WHERE id=?`,[...f.map(k=>req.body[k]),req.params.id]);if(!x.affectedRows)return error(res,404,'Booking tidak ditemukan');const [r]=await pool.query('SELECT * FROM bookings WHERE id=?',[req.params.id]);ok(res,r[0]);};
-exports.remove=async(req,res)=>{const [x]=await pool.query('DELETE FROM bookings WHERE id=?',[req.params.id]);if(!x.affectedRows)return error(res,404,'Booking tidak ditemukan');ok(res,null,'Booking dihapus');};
+
+exports.list = async (req, res) => {
+  try {
+    const [r] = await pool.query(`SELECT b.*, v.name vehicle_name, c.name customer_name FROM bookings b LEFT JOIN vehicles v ON v.id = b.vehicle_id LEFT JOIN customers c ON c.id = b.customer_id ORDER BY b.id DESC`);
+    ok(res, r);
+  } catch (err) {
+    console.error('bookings.list error:', err.message);
+    error(res, 500, 'Gagal memuat bookings: ' + err.message);
+  }
+};
+
+exports.get = async (req, res) => {
+  try {
+    const [r] = await pool.query(`SELECT b.*, v.name vehicle_name, c.name customer_name FROM bookings b LEFT JOIN vehicles v ON v.id = b.vehicle_id LEFT JOIN customers c ON c.id = b.customer_id WHERE b.id = ?`, [req.params.id]);
+    if (!r.length) return error(res, 404, 'Booking tidak ditemukan');
+    ok(res, r[0]);
+  } catch (err) {
+    console.error('bookings.get error:', err.message);
+    error(res, 500, 'Gagal memuat booking: ' + err.message);
+  }
+};
+
+exports.create = async (req, res) => {
+  try {
+    const { booking_code, vehicle_id, customer_id, start_date, end_date, rental_type, pickup_location, dropoff_location, total_amount, status } = req.body;
+    if (!vehicle_id || !start_date || !end_date) return error(res, 400, 'vehicle_id, start_date dan end_date wajib diisi');
+    const [x] = await pool.query(`INSERT INTO bookings(booking_code, vehicle_id, customer_id, start_date, end_date, rental_type, pickup_location, dropoff_location, total_amount, status) VALUES(?,?,?,?,?,?,?,?,?,?)`, [booking_code || `AZZ-${Date.now()}`, vehicle_id, customer_id || null, start_date, end_date, rental_type || 'Lepas Kunci', pickup_location || null, dropoff_location || null, total_amount || 0, status || 'Pending']);
+    const [r] = await pool.query('SELECT * FROM bookings WHERE id = ?', [x.insertId]);
+    created(res, r[0]);
+  } catch (err) {
+    console.error('bookings.create error:', err.message);
+    error(res, 500, 'Gagal membuat booking: ' + err.message);
+  }
+};
+
+exports.update = async (req, res) => {
+  try {
+    const allowed = ['start_date', 'end_date', 'rental_type', 'pickup_location', 'dropoff_location', 'total_amount', 'status', 'payment_status', 'driver_id'];
+    const f = allowed.filter(k => req.body[k] !== undefined);
+    if (!f.length) return error(res, 400, 'Tidak ada data untuk diperbarui');
+    const [x] = await pool.query(`UPDATE bookings SET ${f.map(k => `${k}=?`).join(',')} WHERE id = ?`, [...f.map(k => req.body[k]), req.params.id]);
+    if (!x.affectedRows) return error(res, 404, 'Booking tidak ditemukan');
+    const [r] = await pool.query('SELECT * FROM bookings WHERE id = ?', [req.params.id]);
+    ok(res, r[0]);
+  } catch (err) {
+    console.error('bookings.update error:', err.message);
+    error(res, 500, 'Gagal update booking: ' + err.message);
+  }
+};
+
+exports.remove = async (req, res) => {
+  try {
+    const [x] = await pool.query('DELETE FROM bookings WHERE id = ?', [req.params.id]);
+    if (!x.affectedRows) return error(res, 404, 'Booking tidak ditemukan');
+    ok(res, null, 'Booking dihapus');
+  } catch (err) {
+    console.error('bookings.remove error:', err.message);
+    error(res, 500, 'Gagal hapus booking: ' + err.message);
+  }
+};
