@@ -6,5 +6,6 @@ router.get('/', requireAuth, requireRole('admin'), controller.list);
 router.patch('/me/password', requireAuth, controller.changePassword);
 router.get('/:id', requireAuth, controller.get);
 router.patch('/:id/role-status', requireAuth, requireRole('admin'), controller.updateRoleStatus);
+router.delete('/:id', requireAuth, requireRole('admin'), controller.remove);
 
 module.exports = router;

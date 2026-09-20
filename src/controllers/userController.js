@@ -103,3 +103,18 @@ exports.changePassword = async (req, res) => {
     return error(res, 500, 'Gagal mengubah password');
   }
 };
+
+exports.remove = async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (Number(id) === Number(req.user && req.user.id)) {
+      return error(res, 400, 'Tidak bisa menghapus akun sendiri');
+    }
+    const [x] = await pool.query('DELETE FROM users WHERE id = ?', [id]);
+    if (!x.affectedRows) return error(res, 404, 'User tidak ditemukan');
+    ok(res, null, 'User dihapus');
+  } catch (err) {
+    console.error('users.remove error:', err.message);
+    error(res, 500, 'Gagal hapus user: ' + err.message);
+  }
+};
